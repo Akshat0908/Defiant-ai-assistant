@@ -1,0 +1,11 @@
+venv/
+node_modules/
+*.dylib
+<<<<<<< HEAD
+.DS_Store
+*.pyc
+=======
+venv/
+*.dylib
+>>>>>>> bdcf2e91 (Update .gitignore and remove large files from history)
+venv/

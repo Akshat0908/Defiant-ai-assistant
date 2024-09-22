@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeFi Insight - Your Cyberpunk AI Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background-color: #0a0a0a;
+            color: #00ff00;
+        }
+        .neon-border {
+            box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00, 0 0 20px #00ff00;
+        }
+        .cityscape {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        #defi-bot {
+            width: 100px;
+            height: 100px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <div id="cityscape" class="cityscape"></div>
+    
+    <header class="p-4 bg-black bg-opacity-70">
+        <h1 class="text-4xl font-bold text-center animate-pulse">DeFi Insight</h1>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 flex flex-col items-center justify-center">
+        <div id="defi-bot" class="mb-4">
+            <!-- SVG animation of DeFi-Bot -->
+            <svg viewBox="0 0 100 100">
+                <circle id="bot-body" cx="50" cy="50" r="45" fill="#00ff00" />
+                <circle id="bot-eye-left" cx="35" cy="40" r="5" fill="#0a0a0a" />
+                <circle id="bot-eye-right" cx="65" cy="40" r="5" fill="#0a0a0a" />
+                <path id="bot-mouth" d="M 30 60 Q 50 80 70 60" stroke="#0a0a0a" stroke-width="3" fill="none" />
+            </svg>
+        </div>
+        
+        <div class="w-full max-w-md">
+            <input id="question" type="text" placeholder="Ask about recent DeFi news..." class="w-full p-2 border rounded bg-gray-800 text-green-400 neon-border">
+            <button id="askQuestion" class="mt-2 w-full bg-green-600 text-black px-4 py-2 rounded hover:bg-green-400 transition duration-300">Ask DeFi-Bot</button>
+        </div>
+        
+        <div id="queryResult" class="mt-4 p-4 bg-gray-900 rounded neon-border"></div>
+
+        <div id="translationSection" class="mt-4 hidden">
+            <h3 class="text-xl font-semibold mb-2">Translate Answer</h3>
+            <select id="targetLanguage" class="border p-2 mr-2 bg-gray-800 text-green-400">
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+            </select>
+            <button id="translateAnswer" class="bg-purple-500 text-black px-4 py-2 rounded hover:bg-purple-400 transition duration-300">Translate</button>
+            <div id="translationResult" class="mt-2"></div>
+        </div>
+    </main>
+
+    <footer class="p-4 bg-black bg-opacity-70 text-center">
+        <div id="news-ticker" class="overflow-hidden whitespace-nowrap">
+            <!-- News ticker content -->
+        </div>
+    </footer>
+
+    <script>
+        // Three.js code for 3D cityscape
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('cityscape').appendChild(renderer.domElement);
+
+        // Add simple 3D city elements
+        function createBuilding(x, z, height) {
+            const geometry = new THREE.BoxGeometry(1, height, 1);
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+            const building = new THREE.Mesh(geometry, material);
+            building.position.set(x, height / 2, z);
+            scene.add(building);
+        }
+
+        for (let i = 0; i < 20; i++) {
+            createBuilding(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 5 + 1);
+        }
+
+        camera.position.z = 15;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            scene.rotation.y += 0.001;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // DeFi-Bot animations
+        const botEyes = document.querySelectorAll('#bot-eye-left, #bot-eye-right');
+        const botMouth = document.querySelector('#bot-mouth');
+
+        function blinkBot() {
+            gsap.to(botEyes, { scaleY: 0.1, duration: 0.1, yoyo: true, repeat: 1 });
+        }
+
+        function talkBot() {
+            gsap.to(botMouth, { attr: { d: "M 30 60 Q 50 70 70 60" }, duration: 0.2, yoyo: true, repeat: 5 });
+        }
+
+        setInterval(blinkBot, 3000);
+
+        // Query processing and response
+        document.getElementById('askQuestion').addEventListener('click', async () => {
+            const question = document.getElementById('question').value;
+            const resultDiv = document.getElementById('queryResult');
+            resultDiv.innerHTML = '<p class="text-gray-600">Processing...</p>';
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);  // 30 second timeout
+
+                console.log('Sending request to server...');
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: question }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Received response:', data);
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                const formattedAnswer = formatAnswer(data.response);
+                resultDiv.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-xl font-semibold mb-4">Answer:</h3>
+                        <div class="prose max-w-none">${marked.parse(formattedAnswer)}</div>
+                    </div>
+                `;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    resultDiv.innerHTML = '<p class="text-red-500">Request timed out. Please try again.</p>';
+                } else {
+                    resultDiv.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+                }
+                console.error('Error:', error);
+            }
+        });
+
+        function formatAnswer(answer) {
+            // Split the answer into sentences
+            const sentences = answer.match(/[^.!?]+[.!?]+/g) || [];
+            
+            let formattedAnswer = '';
+            let bulletPoints = [];
+            
+            sentences.forEach((sentence, index) => {
+                if (index === 0) {
+                    // First sentence as introduction
+                    formattedAnswer += sentence.trim() + '\n\n';
+                } else if (sentence.includes(':')) {
+                    // Sentences with colons as headings
+                    formattedAnswer += '## ' + sentence.trim() + '\n\n';
+                } else if (sentence.toLowerCase().includes('for example') || sentence.toLowerCase().includes('such as')) {
+                    // Examples as bullet points
+                    bulletPoints.push(sentence.trim());
+                } else {
+                    // Other sentences as regular text
+                    formattedAnswer += sentence.trim() + ' ';
+                }
+            });
+            
+            // Add bullet points if any
+            if (bulletPoints.length > 0) {
+                formattedAnswer += '\nKey points:\n\n';
+                bulletPoints.forEach(point => {
+                    formattedAnswer += '- ' + point + '\n';
+                });
+            }
+            
+            // Add a link to learn more
+            formattedAnswer += '\n\n[Learn more about DeFi](https://thedefiant.io/what-is-defi)';
+            
+            return formattedAnswer;
+        }
+
+        document.getElementById('translateAnswer').addEventListener('click', async () => {
+            const answer = document.getElementById('queryResult').innerText;
+            const targetLanguage = document.getElementById('targetLanguage').value;
+            const translationResultDiv = document.getElementById('translationResult');
+            translationResultDiv.innerHTML = 'Translating...';
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: answer, target_language: targetLanguage })
+                });
+                const data = await response.json();
+                translationResultDiv.innerHTML = `<p><strong>Translated Answer:</strong> ${data.translated_text}</p>`;
+            } catch (error) {
+                translationResultDiv.innerHTML = 'Error translating answer';
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

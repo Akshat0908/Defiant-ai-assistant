@@ -1,0 +1,24 @@
+{
+  "name": "defi-insight",
+  "version": "1.0.0",
+  "description": "A decentralized AI research assistant for DeFi insights",
+  "main": "app.js",
+  "scripts": {
+    "start": "node api/query.js"
+  },
+  "dependencies": {
+    "axios": "^0.21.4",
+    "coingecko-api": "^1.0.10",
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "express": "^4.21.0",
+    "node-cache": "^5.1.2",
+    "rss-parser": "^3.12.0"
+  },
+  "license": "GPL-3.0",
+  "directories": {
+    "doc": "docs"
+  },
+  "keywords": [],
+  "author": ""
+}
